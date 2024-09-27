@@ -2,6 +2,7 @@ import os
 import urllib.request
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 
 
 def get_datafile(url, data_dir, destination_file)-> None:
@@ -39,6 +40,42 @@ def get_data(data_file, index_col, target_col, new_target_col_name, ratio: float
   return target[:N], target[N:], time_steps[:N], time_steps[N:]
 
 
+def get_nb_data(data_file, 
+                index_col, 
+                target_col, 
+                new_target_col_name, 
+                window_size:int=7, 
+                horizon: int=1, 
+                batch_size: int=1024,
+                ratio: float=0.8):
+  df = pd.read_csv(data_file,parse_dates=[index_col],index_col=[index_col])
+  final_df = pd.DataFrame(df[target_col]).rename(columns={target_col: new_target_col_name})
+  time_steps = final_df.index.to_numpy()
+  df_nbeats = final_df.copy()
+  for i in range(window_size):
+    df_nbeats[f"Price+{i+1}"] = df_nbeats["Price"].shift(periods=i+1)
+  df_nbeats.dropna().head()
+  
+  X = df_nbeats.dropna().drop("Price", axis=1)
+  y = df_nbeats.dropna()["Price"]
+
+  split_size = int(len(X) * ratio)
+  X_train, y_train = X[:split_size], y[:split_size]
+  X_test, y_test = X[split_size:], y[split_size:]
+
+  train_features_dataset = tf.data.Dataset.from_tensor_slices(X_train)
+  train_labels_dataset = tf.data.Dataset.from_tensor_slices(y_train)
+  test_features_dataset = tf.data.Dataset.from_tensor_slices(X_test)
+  test_labels_dataset = tf.data.Dataset.from_tensor_slices(y_test)
+  train_dataset = tf.data.Dataset.zip((train_features_dataset, train_labels_dataset))
+  test_dataset = tf.data.Dataset.zip((test_features_dataset, test_labels_dataset))
+  train_dataset = train_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+  test_dataset = test_dataset.batch(batch_size).prefetch(tf.data.AUTOTUNE)
+
+  return train_dataset, test_dataset
+  
+
+
 def get_labeled_windows(x, window_size: int=7, horizon: int=1)->tuple:
   """
   Takes a sequence of values as a 1-D numpy array.
@@ -65,4 +102,3 @@ def make_train_test_splits(windows, labels, test_split=0.2):
   split_idx = 1 - int(len(windows)*test_split)
   return windows[:split_idx], windows[split_idx:], labels[:split_idx], labels[split_idx:]
 
-  
