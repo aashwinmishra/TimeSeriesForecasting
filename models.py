@@ -45,6 +45,43 @@ class BasicBlock(tf.keras.layers.Layer):
     return backcast, forecast
 
 
+class Stack(tf.keras.layers.Layer):
+  """
+  Organizing K-blocks into Stacks using the doubly residual stacking principle 
+  for N-BEATS, outlined in Oreshkin et al (2020).
+  """
+  def __init__(self, 
+               num_blocks: int, 
+               input_size: int, 
+               theta_size: int, 
+               horizon: int, 
+               n_neurons: int, 
+               n_layers: int, 
+               **kwargs):
+    """
+    Initializes the Stack for N-BEATS.
+    Args:
+      num_blocks: Number of blocks constituting the stack
+      input_size: size of window to predict from
+      theta_size: dimensionality of the parameters for the bases
+      horizon: steps to predict for
+      n_neurons: neurons in the FC layers
+      n_layers: number of layers in the FC section of the block
+    """
+    super().__init__(**kwargs)
+    self.blocks = [BasicBlock(input_size, theta_size, horizon, n_neurons, n_layers) for _ in range(num_blocks)]
+
+  def call(self, inputs):
+    forecast = []
+    for Block in self.blocks:
+      x_hat, y_hat = Block(inputs)
+      inputs = tfkl.subtract([inputs, x_hat])
+      forecast.append(y_hat)
+    forecast = tfkl.add(forecast)
+    return inputs, forecast
+    
+
+
 def create_model_checkpoint(model_name, save_path: str="Experiments"):
   return tf.keras.callbacks.ModelCheckpoint(filepath=os.path.join(save_path, model_name+".keras"),
                                             verbose=0, 
