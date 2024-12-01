@@ -23,8 +23,8 @@ def double_exponential_smoothing(y: np.array,
                                  beta: float=0.5,
                                  horizon: int=2)->np.array:
   """
-  Basic, non-optimized Double Exponential Smoothing (SES) implementation 
-  [ie, Holts Method].
+  Basic, non-optimized Double Exponential Smoothing implementation 
+  [ie, Holt’s linear trend method].
   Args:
     y: Time series data
     alpha: Smoothing factor
