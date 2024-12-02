@@ -1,0 +1,110 @@
+import numpy as np
+
+
+def mse(y_true: np.array, y_pred: np.array) -> float:
+  """
+  Basic implementation of Mean Squared Error.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    float value of MSE.
+  """
+  assert len(y_true) == len(y_pred)
+  return np.square(y_true - y_pred).mean()
+
+
+def rmse(y_true: np.array, y_pred: np.array) -> float:
+  """
+  Basic implementation of Root Mean Squared Error.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    float value of RMSE.
+  """
+  assert len(y_true) == len(y_pred)
+  return np.sqrt(mse(y_true, y_pred))
+
+
+def mae(y_true: np.array, y_pred: np.array) -> float:
+  """
+  Basic implementation of Mean Absolute Error.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    float value of MAE.
+  """
+  assert len(y_true) == len(y_pred)
+  return np.abs(y_true - y_pred).mean()
+
+
+def mape(y_true: np.array, y_pred: np.array, eps: float = 1e-3) -> float:
+  """
+  Implementation of Mean Absolute Percentage Error
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    Float value of MAPE (scaled to the unit interval a la sklearn.metrics.mean_absolute_percentage_error).
+  """
+  assert len(y_true) == len(y_pred)
+  return np.abs((y_true - y_pred) / (y_true + eps)).mean()
+
+
+def smape(y_true: np.array, y_pred: np.array) -> float:
+  """
+  Implementation of symmetric Mean Absolute Percentage Error, based off of
+  Armstrong, J.(1978),'Long-range forecasting: From crystal ball to computer'.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    float value of sMAPE.
+  """
+  abs_error = np.abs(y_true - y_pred)
+  scale = y_true + y_pred 
+  return np.mean(200.0*abs_error/scale)
+
+
+def mase(y_true: np.array, y_pred: np.array) -> float:
+  """
+  Implementation of Scaled Mean Absolute Error, based off of
+  Hyndman, R., & Koehler, A.(2006),'Another look at measures of forecast 
+  accuracy', International Journal of Forecasting.
+  NOTE: We assume no seasonality in the time series.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    float value of MASE.
+  """
+  mae = np.mean(np.abs(y_true - y_pred))
+  scale = np.mean(np.abs(y_true[1:] - y_true[:-1]))
+  return (mae / scale)
+
+
+def evaluate_preds(y_true: np.array, y_pred: np.array) -> dict:
+  """
+  Takes true values of sequence and predicted values, evaluates predictions on 
+  MAE, RMSE, MAPE, sMAPE, MASE and returns metrics as a dict.
+  Args:
+    y_true: true sequence of values as np.array.
+    y_pred: Prediction of sequence.
+  Returns:
+    dict with keys "mae", "rmse", "mape", "smape", "mase".
+  """
+  mae = mae(y_true, y_pred)
+  rmse = rmse(y_true, y_pred)
+  mape = mape(y_true, y_pred)
+  smape = smape(y_true, y_pred)
+  mase = mase(y_true, y_pred)
+
+  return {"mae": mae,
+          "rmse": rmse,
+          "mape": mape,
+          "smape": smape,
+          "mase": mase}
+
+          
