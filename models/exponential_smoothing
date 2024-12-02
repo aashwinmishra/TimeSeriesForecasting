@@ -1,6 +1,81 @@
 import numpy as np
 
 
+class HoltWinters:
+  """
+  Basic, non-optimized Triple Exponential Smoothing implementation
+  [ie, Holt-Winters Method].
+  """
+  def __init__(self, 
+               alpha: float, 
+               beta: float, 
+               gamma: float, 
+               season_length: int):
+    """
+    Instantiate Holt Winters object
+    Args:
+      y: Time series data
+      alpha: Smoothing factor
+      beta: trend factor
+      gamma: seasonality factor
+      horizon: horizon to predict beyond the lenght of series
+    """
+    self.alpha = alpha 
+    self.beta = beta 
+    self.gamma = gamma 
+    self.season_length = season_length
+
+  def _initial_trend(self, y: np.array):
+    total = 0.0 
+    for i in range(self.season_length):
+      total += y[i + self.season_length] - y[i]
+    return total / self.season_length**2
+
+  def _initial_seasonal_components(self, y: np.array):
+    seasonals = np.zeros(self.season_length)
+    season_averages = []
+    n_seasons = int(len(y)/self.season_length)
+
+    for i in range(n_seasons):
+      season_averages.append(np.mean(y[i*self.season_length:(i+1)*self.season_length]).item())
+    for i in range(self.season_length):
+      sum_of_value_over_average = 0.0
+      for j in range(n_seasons):
+        sum_of_value_over_average += y[self.season_length * j + 1] - season_averages[j]
+      seasonals[i] = sum_of_value_over_average / n_seasons
+    return seasonals
+
+  def fit(self, y: np.array):
+    seasonals = self._initial_seaonal_components(y)
+    trend = self._initial_trend(y)
+    smooth = y[0]
+    predictions = [smooth]
+
+    for i in range(1, len(y)):
+      value = y[i]
+      previous_smooth = smooth 
+      seasonal = seasonals[i % self.season_length]
+      smooth = self.alpha * (value - seasonal) + (1 - self.alpha) * (previous_smooth + trend)
+      trend = self.beta * (smooth - previous_smooth) + (1 - self.beta) * trend
+      seasonals[i % self.season_length] = self.gamma * (value - smooth) + (1 - self.gamma) * seasonal
+      predictions.append(smooth + trend + seasonals[i % self.season_length])
+
+    self.trend_ = trend
+    self.smooth_ = smooth
+    self.seasonals_ = seasonals
+    self.predictions_ = predictions
+    return self
+
+  def predict(self, horizon: int=10):
+    predictions = self.predictions_
+    T = len(predictions)
+    for i in range(T, T + horizon):
+      m = i - T + 1
+      prediction = self.smooth_ + m * self.trend_ + self.seasonals_[i % self.season_length]
+      predictions.append(prediction)
+    return predictions
+    
+
 def single_exponential_smoothing(y: np.array, 
                                  alpha: float=0.3)->np.array:
   """
